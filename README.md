@@ -87,17 +87,3 @@ reviewing the code:
   `/login`, and round-tripped a real room through the actual UI — created
   it via the form, watched the count go from 10 to 11 rooms in the live
   database, deleted it via the confirmation dialog, watched it return to 10
-
-## What's left
-
-- No automated test suite (all verification above was manual/scripted
-  testing during development, not a CI-style test suite)
-- No dedicated REST routes for StudentCourse/LecturerCourse — Profile.vue
-  currently derives "Enrolled Subjects"/"Teaching Assignments" from the
-  already-scoped `/api/schedules` response instead
-- No pagination on list endpoints — fine at this data scale
-
-- `Frontend/src/data/mockData.js` and `data/analytics.js` are no longer
-  imported by the live app (confirmed via production build output) but
-  are kept as offline fixtures for UI development without a backend —
-  delete them if you don't want the dead weight
