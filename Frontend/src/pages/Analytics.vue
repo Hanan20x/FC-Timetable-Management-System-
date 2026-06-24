@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Bar } from 'vue-chartjs'
 import {
   Chart as ChartJS,
@@ -10,7 +10,7 @@ import {
   CategoryScale,
   LinearScale,
 } from 'chart.js'
-import { computeRoomUtilization, detectConflicts, computeOptimizationSuggestions } from '../data/analytics.js'
+import { fetchAnalyticsOverview } from '../services/analyticsService.js'
 import {
   ExclamationTriangleIcon,
   SparklesIcon,
@@ -21,19 +21,40 @@ import {
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
 
-const utilization = computeRoomUtilization()
-const conflicts = detectConflicts()
-const suggestions = computeOptimizationSuggestions()
+const utilization = ref([])
+const conflicts = ref([])
+const suggestions = ref([])
+const loading = ref(true)
+const error = ref('')
 
-const sortedUtilization = [...utilization].sort((a, b) => b.utilizationRate - a.utilizationRate)
+async function loadAnalytics() {
+  loading.value = true
+  error.value = ''
+  try {
+    const data = await fetchAnalyticsOverview()
+    utilization.value = data.utilization
+    conflicts.value = data.conflicts
+    suggestions.value = data.suggestions
+  } catch (err) {
+    error.value = err.response?.data?.error || 'Could not load analytics. Is the backend running?'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadAnalytics)
+
+const sortedUtilization = computed(() =>
+  [...utilization.value].sort((a, b) => b.utilizationRate - a.utilizationRate)
+)
 
 const chartData = computed(() => ({
-  labels: sortedUtilization.map((u) => u.room.nama_ruang_singkatan),
+  labels: sortedUtilization.value.map((u) => u.room.nama_ruang_singkatan),
   datasets: [
     {
       label: 'Utilization %',
-      data: sortedUtilization.map((u) => u.utilizationRate),
-      backgroundColor: sortedUtilization.map((u) =>
+      data: sortedUtilization.value.map((u) => u.utilizationRate),
+      backgroundColor: sortedUtilization.value.map((u) =>
         u.utilizationRate > 60 ? '#5C001F' : u.utilizationRate > 30 ? '#8A002E' : '#F3C4D4'
       ),
       borderRadius: 8,
@@ -67,8 +88,9 @@ const chartOptions = {
 }
 
 const avgUtilization = computed(() => {
-  const sum = utilization.reduce((acc, u) => acc + u.utilizationRate, 0)
-  return Math.round(sum / utilization.length)
+  if (utilization.value.length === 0) return 0
+  const sum = utilization.value.reduce((acc, u) => acc + u.utilizationRate, 0)
+  return Math.round(sum / utilization.value.length)
 })
 
 function conflictLabel(type) {
@@ -93,6 +115,15 @@ function severityColor(severity) {
       <p class="text-sm text-slate-500">Room utilization, conflict detection, and scheduling suggestions.</p>
     </div>
 
+    <div v-if="loading" class="flex h-48 items-center justify-center text-sm text-slate-400">
+      Loading analytics…
+    </div>
+
+    <div v-else-if="error" class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
+      {{ error }}
+    </div>
+
+    <template v-else>
     <!-- Summary row -->
     <section class="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <div class="rounded-2xl bg-white p-5 shadow-soft ring-1 ring-slate-100">
@@ -193,5 +224,6 @@ function severityColor(severity) {
         </li>
       </ul>
     </section>
+    </template>
   </div>
 </template>

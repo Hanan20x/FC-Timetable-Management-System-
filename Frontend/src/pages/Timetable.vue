@@ -1,7 +1,9 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useAuth } from '../stores/auth.js'
-import { getScheduleForUser, schedules, rooms, subjects } from '../data/mockData.js'
+import { listSchedules } from '../services/scheduleService.js'
+import { listRooms } from '../services/roomService.js'
+import { listSubjects } from '../services/subjectService.js'
 import TimetableGrid from '../components/TimetableGrid.vue'
 import { FunnelIcon } from '@heroicons/vue/24/outline'
 
@@ -11,16 +13,47 @@ const view = ref(user.value?.user_type === 'admin' ? 'all' : 'mine')
 const roomFilter = ref('')
 const subjectFilter = ref('')
 
-const baseSchedule = computed(() => {
-  return view.value === 'all' ? schedules : getScheduleForUser(user.value)
-})
+const rooms = ref([])
+const subjects = ref([])
+const schedule = ref([])
+const loading = ref(true)
+const error = ref('')
 
-const filteredSchedule = computed(() => {
-  return baseSchedule.value.filter((s) => {
-    if (roomFilter.value && s.room_id !== Number(roomFilter.value)) return false
-    if (subjectFilter.value && s.subject_id !== Number(subjectFilter.value)) return false
-    return true
-  })
+async function loadFilters() {
+  try {
+    const [roomData, subjectData] = await Promise.all([listRooms(), listSubjects()])
+    rooms.value = roomData
+    subjects.value = subjectData
+  } catch (err) {
+    // Non-fatal — filters just won't populate, but the grid can still load
+    console.error('Failed to load filter options', err)
+  }
+}
+
+async function loadSchedule() {
+  loading.value = true
+  error.value = ''
+  try {
+    schedule.value = await listSchedules({
+      all: view.value === 'all',
+      roomId: roomFilter.value || undefined,
+      subjectId: subjectFilter.value || undefined,
+    })
+  } catch (err) {
+    error.value = err.response?.data?.error || 'Could not load the timetable.'
+  } finally {
+    loading.value = false
+  }
+}
+
+// Re-fetch from the server whenever the view toggle or either filter changes,
+// rather than fetching everything once and filtering client-side — the
+// backend already supports these as query params.
+watch([view, roomFilter, subjectFilter], loadSchedule)
+
+onMounted(() => {
+  loadFilters()
+  loadSchedule()
 })
 </script>
 
@@ -73,7 +106,15 @@ const filteredSchedule = computed(() => {
       </div>
     </div>
 
-    <TimetableGrid v-if="filteredSchedule.length > 0" :schedules="filteredSchedule" />
+    <div v-if="loading" class="flex h-48 items-center justify-center text-sm text-slate-400">
+      Loading timetable…
+    </div>
+
+    <div v-else-if="error" class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
+      {{ error }}
+    </div>
+
+    <TimetableGrid v-else-if="schedule.length > 0" :schedules="schedule" />
     <div
       v-else
       class="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center"

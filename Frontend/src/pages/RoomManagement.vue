@@ -1,7 +1,7 @@
 <script setup>
-import { ref, reactive, computed } from 'vue'
-import { rooms as initialRooms } from '../data/mockData.js'
-import { computeRoomUtilization } from '../data/analytics.js'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { listRooms, createRoom, updateRoom, deleteRoom } from '../services/roomService.js'
+import { fetchAnalyticsOverview } from '../services/analyticsService.js'
 import {
   PlusIcon,
   PencilSquareIcon,
@@ -10,9 +10,10 @@ import {
   BuildingOffice2Icon,
 } from '@heroicons/vue/24/outline'
 
-// Local mutable copy — stands in for the future GET/POST/PUT/DELETE /api/rooms calls
-const rooms = ref([...initialRooms])
-const utilization = computeRoomUtilization() // static snapshot for the badge; recomputed data wiring comes with backend
+const rooms = ref([])
+const utilization = ref([])
+const loading = ref(true)
+const loadError = ref('')
 
 const roomTypes = ['Lecture Hall', 'Classroom', 'Computer Lab', 'Seminar Room']
 
@@ -20,6 +21,9 @@ const modalOpen = ref(false)
 const editingId = ref(null)
 const deleteTarget = ref(null)
 const search = ref('')
+const formError = ref('')
+const saving = ref(false)
+const deleting = ref(false)
 
 const form = reactive({
   kod_ruang: '',
@@ -41,11 +45,28 @@ const filteredRooms = computed(() => {
 })
 
 function utilFor(roomId) {
-  return utilization.find((u) => u.room.id === roomId)?.utilizationRate ?? 0
+  return utilization.value.find((u) => u.room.id === roomId)?.utilizationRate ?? 0
 }
+
+async function loadRooms() {
+  loading.value = true
+  loadError.value = ''
+  try {
+    const [roomData, analytics] = await Promise.all([listRooms(), fetchAnalyticsOverview()])
+    rooms.value = roomData
+    utilization.value = analytics.utilization
+  } catch (err) {
+    loadError.value = err.response?.data?.error || 'Could not load rooms. Is the backend running?'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadRooms)
 
 function openCreate() {
   editingId.value = null
+  formError.value = ''
   Object.assign(form, {
     kod_ruang: '',
     nama_ruang: '',
@@ -58,6 +79,7 @@ function openCreate() {
 
 function openEdit(room) {
   editingId.value = room.id
+  formError.value = ''
   Object.assign(form, { ...room })
   modalOpen.value = true
 }
@@ -66,25 +88,56 @@ function closeModal() {
   modalOpen.value = false
 }
 
-function saveRoom() {
-  if (!form.kod_ruang || !form.nama_ruang) return
-  if (editingId.value) {
-    const idx = rooms.value.findIndex((r) => r.id === editingId.value)
-    rooms.value[idx] = { ...rooms.value[idx], ...form }
-  } else {
-    const nextId = Math.max(0, ...rooms.value.map((r) => r.id)) + 1
-    rooms.value.push({ id: nextId, ...form })
+async function saveRoom() {
+  if (!form.kod_ruang || !form.nama_ruang) {
+    formError.value = 'Room code and name are required.'
+    return
   }
-  modalOpen.value = false
+  saving.value = true
+  formError.value = ''
+  try {
+    const payload = {
+      kod_ruang: form.kod_ruang,
+      nama_ruang: form.nama_ruang,
+      nama_ruang_singkatan: form.nama_ruang_singkatan,
+      kapasiti: form.kapasiti,
+      jenis_ruang: form.jenis_ruang,
+    }
+    if (editingId.value) {
+      const updated = await updateRoom(editingId.value, payload)
+      const idx = rooms.value.findIndex((r) => r.id === editingId.value)
+      rooms.value[idx] = updated
+    } else {
+      const created = await createRoom(payload)
+      rooms.value.push(created)
+    }
+    modalOpen.value = false
+  } catch (err) {
+    // Surfaces the backend's actual message — e.g. "Room code already exists"
+    // or validation details — rather than failing silently.
+    formError.value = err.response?.data?.error || 'Could not save the room. Please try again.'
+  } finally {
+    saving.value = false
+  }
 }
 
 function confirmDelete(room) {
   deleteTarget.value = room
 }
 
-function performDelete() {
-  rooms.value = rooms.value.filter((r) => r.id !== deleteTarget.value.id)
-  deleteTarget.value = null
+async function performDelete() {
+  deleting.value = true
+  try {
+    await deleteRoom(deleteTarget.value.id)
+    rooms.value = rooms.value.filter((r) => r.id !== deleteTarget.value.id)
+    deleteTarget.value = null
+  } catch (err) {
+    // e.g. "Cannot delete this room — it has 3 scheduled session(s)."
+    loadError.value = err.response?.data?.error || 'Could not delete the room.'
+    deleteTarget.value = null
+  } finally {
+    deleting.value = false
+  }
 }
 
 function typeBadgeColor(type) {
@@ -122,66 +175,76 @@ function typeBadgeColor(type) {
       </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <div
-        v-for="room in filteredRooms"
-        :key="room.id"
-        class="group rounded-2xl bg-white p-5 shadow-soft ring-1 ring-slate-100 transition-all hover:-translate-y-0.5 hover:shadow-card"
-      >
-        <div class="flex items-start justify-between">
-          <div class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-maroon-700 text-white">
-              <BuildingOffice2Icon class="h-5 w-5" />
-            </div>
-            <div>
-              <p class="text-sm font-semibold text-slate-900">{{ room.nama_ruang }}</p>
-              <p class="text-xs text-slate-400">{{ room.kod_ruang }}</p>
-            </div>
-          </div>
-          <div class="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-            <button
-              class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-maroon-700"
-              @click="openEdit(room)"
-            >
-              <PencilSquareIcon class="h-4 w-4" />
-            </button>
-            <button
-              class="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-              @click="confirmDelete(room)"
-            >
-              <TrashIcon class="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+    <div v-if="loading" class="flex h-48 items-center justify-center text-sm text-slate-400">
+      Loading rooms…
+    </div>
 
-        <div class="mt-4 flex items-center justify-between">
-          <span
-            class="rounded-full px-2.5 py-1 text-xs font-medium"
-            :class="typeBadgeColor(room.jenis_ruang)"
-          >
-            {{ room.jenis_ruang }}
-          </span>
-          <span class="text-xs text-slate-500">Capacity: {{ room.kapasiti }}</span>
-        </div>
+    <div v-else-if="loadError" class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
+      {{ loadError }}
+    </div>
 
-        <div class="mt-3">
-          <div class="mb-1 flex items-center justify-between text-xs text-slate-400">
-            <span>Weekly utilization</span>
-            <span>{{ utilFor(room.id) }}%</span>
+    <template v-else>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          v-for="room in filteredRooms"
+          :key="room.id"
+          class="group rounded-2xl bg-white p-5 shadow-soft ring-1 ring-slate-100 transition-all hover:-translate-y-0.5 hover:shadow-card"
+        >
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-maroon-700 text-white">
+                <BuildingOffice2Icon class="h-5 w-5" />
+              </div>
+              <div>
+                <p class="text-sm font-semibold text-slate-900">{{ room.nama_ruang }}</p>
+                <p class="text-xs text-slate-400">{{ room.kod_ruang }}</p>
+              </div>
+            </div>
+            <div class="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+              <button
+                class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-maroon-700"
+                @click="openEdit(room)"
+              >
+                <PencilSquareIcon class="h-4 w-4" />
+              </button>
+              <button
+                class="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                @click="confirmDelete(room)"
+              >
+                <TrashIcon class="h-4 w-4" />
+              </button>
+            </div>
           </div>
-          <div class="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-            <div
-              class="h-full rounded-full bg-gold-500"
-              :style="{ width: utilFor(room.id) + '%' }"
-            />
+
+          <div class="mt-4 flex items-center justify-between">
+            <span
+              class="rounded-full px-2.5 py-1 text-xs font-medium"
+              :class="typeBadgeColor(room.jenis_ruang)"
+            >
+              {{ room.jenis_ruang }}
+            </span>
+            <span class="text-xs text-slate-500">Capacity: {{ room.kapasiti }}</span>
+          </div>
+
+          <div class="mt-3">
+            <div class="mb-1 flex items-center justify-between text-xs text-slate-400">
+              <span>Weekly utilization</span>
+              <span>{{ utilFor(room.id) }}%</span>
+            </div>
+            <div class="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+              <div
+                class="h-full rounded-full bg-gold-500"
+                :style="{ width: utilFor(room.id) + '%' }"
+              />
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <p v-if="filteredRooms.length === 0" class="py-10 text-center text-sm text-slate-400">
-      No rooms match "{{ search }}".
-    </p>
+      <p v-if="filteredRooms.length === 0" class="py-10 text-center text-sm text-slate-400">
+        No rooms match "{{ search }}".
+      </p>
+    </template>
 
     <!-- Add/Edit modal -->
     <Transition name="fade">
@@ -248,6 +311,8 @@ function typeBadgeColor(type) {
                 </select>
               </div>
             </div>
+
+            <p v-if="formError" class="text-sm text-rose-600">{{ formError }}</p>
           </div>
 
           <div class="mt-6 flex justify-end gap-2">
@@ -258,10 +323,11 @@ function typeBadgeColor(type) {
               Cancel
             </button>
             <button
-              class="rounded-xl bg-maroon-700 px-4 py-2 text-sm font-semibold text-white shadow-card hover:bg-maroon-800"
+              :disabled="saving"
+              class="rounded-xl bg-maroon-700 px-4 py-2 text-sm font-semibold text-white shadow-card transition hover:bg-maroon-800 disabled:opacity-60"
               @click="saveRoom"
             >
-              {{ editingId ? 'Save Changes' : 'Create Room' }}
+              {{ saving ? 'Saving…' : editingId ? 'Save Changes' : 'Create Room' }}
             </button>
           </div>
         </div>
@@ -291,10 +357,11 @@ function typeBadgeColor(type) {
               Cancel
             </button>
             <button
-              class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+              :disabled="deleting"
+              class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-60"
               @click="performDelete"
             >
-              Delete
+              {{ deleting ? 'Deleting…' : 'Delete' }}
             </button>
           </div>
         </div>

@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { days, timeSlots, getSubject, getRoom, getLecturer } from '../data/mockData.js'
+import { days, timeSlots } from '../data/constants.js'
 
 const props = defineProps({
   schedules: { type: Array, required: true },
@@ -79,15 +79,15 @@ const grid = computed(() => {
               class="mb-1 rounded-lg border px-2 py-1.5 text-xs leading-snug"
               :class="colorFor(entry.subject_id)"
             >
-              <p class="font-semibold">{{ getSubject(entry.subject_id)?.kod_subjek }}</p>
+              <p class="font-semibold">{{ entry.subject?.kod_subjek }}</p>
               <p v-if="!compact" class="truncate text-[11px] opacity-80">
-                {{ getSubject(entry.subject_id)?.nama_subjek }}
+                {{ entry.subject?.nama_subjek }}
               </p>
               <p class="text-[11px] opacity-70">
-                {{ getRoom(entry.room_id)?.nama_ruang_singkatan }} &middot; Sec {{ entry.section }}
+                {{ entry.room?.nama_ruang_singkatan }} &middot; Sec {{ entry.section }}
               </p>
               <p v-if="!compact" class="truncate text-[11px] opacity-70">
-                {{ getLecturer(entry.lecturer_id)?.full_name }}
+                {{ entry.lecturer?.full_name }}
               </p>
             </div>
           </td>
