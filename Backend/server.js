@@ -12,6 +12,7 @@ const roomRoutes = require('./routes/rooms');
 const subjectRoutes = require('./routes/subjects');
 const scheduleRoutes = require('./routes/schedules');
 const analyticsRoutes = require('./routes/analytics');
+const userRoutes = require('./routes/users');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -39,6 +40,7 @@ app.use('/api/rooms', roomRoutes);
 app.use('/api/subjects', subjectRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/users', userRoutes);
 
 // --- 404 fallback ----------------------------------------------------------
 app.use((req, res) => {
