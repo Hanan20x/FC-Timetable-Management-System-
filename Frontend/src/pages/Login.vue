@@ -25,8 +25,7 @@ async function handleSubmit() {
     return
   }
   loading.value = true
-  await new Promise((r) => setTimeout(r, 350)) // mimic network latency
-  const result = login(username.value, password.value)
+  const result = await login(username.value, password.value)
   loading.value = false
   if (result.success) {
     router.push('/dashboard')
