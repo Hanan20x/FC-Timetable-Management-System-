@@ -65,6 +65,7 @@ for full design-system notes.
 **Backend** — 7 PostgreSQL tables (Session, User, Subject, Room,
 StudentCourse, LecturerCourse, Schedule) with proper foreign keys and
 indexes via Sequelize migrations. JWT auth with bcrypt password hashing.
+CORS dynamically configured for seamless multi-instance local development (`http://localhost:*`).
 Full REST CRUD for Rooms and Subjects (admin-gated mutations). Role-scoped
 Schedule queries (students see their enrollments, lecturers see their
 teaching load, admins see everything). Analytics endpoints that are a
@@ -102,13 +103,9 @@ reviewing the code:
   already-scoped `/api/schedules` response instead
 - No pagination on list endpoints — fine at this data scale
 - No rate limiting on login (brute-force protection)
-- The login screen's "Quick demo access" buttons (which pre-fill real
-  working passwords for the seeded demo accounts) are gated behind
-  `import.meta.env.DEV` and are confirmed absent from production builds —
-  but the underlying accounts still use weak seeded passwords
+- The underlying demo accounts still use weak seeded passwords
   (`admin123`/`lecturer123`/`student123`). **Change those passwords before
-  any real deployment** — removing the one-click buttons doesn't help if
-  someone can still type the username/password directly.
+  any real deployment.**
 - `Frontend/src/data/mockData.js` and `data/analytics.js` are no longer
   imported by the live app (confirmed via production build output) but
   are kept as offline fixtures for UI development without a backend —
