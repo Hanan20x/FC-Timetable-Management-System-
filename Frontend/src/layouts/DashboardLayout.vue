@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../stores/auth.js'
 import {
   Squares2X2Icon,
@@ -10,10 +10,12 @@ import {
   Bars3Icon,
   XMarkIcon,
   BellIcon,
+  ArrowRightOnRectangleIcon,
 } from '@heroicons/vue/24/outline'
 
 const route = useRoute()
-const { user } = useAuth()
+const router = useRouter()
+const { user, logout } = useAuth()
 const mobileOpen = ref(false)
 
 const navItems = [
@@ -41,6 +43,11 @@ const initials = computed(() => {
     .join('')
     .toUpperCase()
 })
+
+function handleLogout() {
+  logout()
+  router.push('/login')
+}
 </script>
 
 <template>
@@ -50,15 +57,15 @@ const initials = computed(() => {
       class="fixed inset-y-0 left-0 z-40 w-64 bg-slate-900 text-slate-300 transform transition-transform duration-200 lg:static lg:translate-x-0"
       :class="mobileOpen ? 'translate-x-0' : '-translate-x-full'"
     >
-      <div class="flex h-16 items-center gap-2.5 px-6 border-b border-white/5">
+      <div class="flex h-16 items-center gap-3 px-6 border-b border-white/5">
         <img
-          src="/branding/utm-emblem-white.png"
+          src="/branding/utm-logo-white.png"
           alt="UTM"
-          class="h-9 w-9 shrink-0 object-contain"
+          class="h-8 w-auto shrink-0 object-contain"
         />
-        <div class="leading-tight">
-          <p class="text-sm font-semibold text-white">UTM Timetable</p>
-          <p class="text-[11px] text-slate-400">Faculty of Computing</p>
+        <div class="leading-tight border-l border-white/20 pl-3">
+          <p class="text-[13px] font-semibold text-white tracking-wide">Timetable</p>
+          <p class="text-[10px] text-slate-400">Faculty of Computing</p>
         </div>
       </div>
 
@@ -85,7 +92,7 @@ const initials = computed(() => {
       </nav>
 
       <div class="absolute bottom-0 left-0 right-0 px-6 py-5 border-t border-white/5">
-        <p class="text-xs text-slate-500">Sesi 2025/2026 &middot; Semester 1</p>
+        <p class="text-xs text-slate-500">Sesi 2025/2026 &middot; Semester 2</p>
         <p class="mt-1 text-xs text-slate-600">Faculty of Computing</p>
       </div>
     </aside>
@@ -136,6 +143,16 @@ const initials = computed(() => {
               {{ user?.full_name }}
             </span>
           </router-link>
+
+          <div class="hidden h-6 w-px bg-slate-200 sm:block"></div>
+
+          <button
+            @click="handleLogout"
+            class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600"
+            title="Sign out"
+          >
+            <ArrowRightOnRectangleIcon class="h-5 w-5" />
+          </button>
         </div>
       </header>
 
