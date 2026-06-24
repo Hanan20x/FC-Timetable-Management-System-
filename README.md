@@ -43,13 +43,7 @@ cp .env.example .env   # defaults to http://localhost:5000/api — adjust if you
 npm run dev              # http://localhost:5173
 ```
 
-Demo accounts (created by the seeder, these are real rows in the database
-— login goes through the actual backend, not a mock):
-```
-admin / admin123
-STAFF1000 / lecturer123   (Dr. Aiman Hakim)
-A22001 / student123        (Aiman Rahman)
-```
+
 
 ## What's built
 
@@ -102,10 +96,7 @@ reviewing the code:
   currently derives "Enrolled Subjects"/"Teaching Assignments" from the
   already-scoped `/api/schedules` response instead
 - No pagination on list endpoints — fine at this data scale
-- No rate limiting on login (brute-force protection)
-- The underlying demo accounts still use weak seeded passwords
-  (`admin123`/`lecturer123`/`student123`). **Change those passwords before
-  any real deployment.**
+
 - `Frontend/src/data/mockData.js` and `data/analytics.js` are no longer
   imported by the live app (confirmed via production build output) but
   are kept as offline fixtures for UI development without a backend —
