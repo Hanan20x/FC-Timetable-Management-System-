@@ -7,9 +7,9 @@ Faculty of Computing — Vue 3 frontend + Express/Sequelize/PostgreSQL backend.
 
 | Layer | Status |
 |---|---|
-| **Frontend** | Complete — built against mock data, branded for UTM |
+| **Frontend** | Complete — branded for UTM, wired to the real backend |
 | **Backend** | Complete — built and verified end-to-end against a real PostgreSQL database |
-| **Integration** | Not yet wired together — frontend still reads from `src/data/mockData.js` rather than calling the live API |
+| **Integration** | Complete — frontend calls the live API; verified with a real headless browser doing a full create→view→delete round trip against a real running backend + Postgres |
 
 ## Project structure
 
@@ -39,11 +39,12 @@ npm run dev             # http://localhost:5000
 ```bash
 cd Frontend
 npm install
+cp .env.example .env   # defaults to http://localhost:5000/api — adjust if your backend runs elsewhere
 npm run dev              # http://localhost:5173
 ```
 
-Demo accounts (created by the seeder, work in both the frontend mock auth
-and the real backend once integrated):
+Demo accounts (created by the seeder, these are real rows in the database
+— login goes through the actual backend, not a mock):
 ```
 admin / admin123
 STAFF1000 / lecturer123   (Dr. Aiman Hakim)
@@ -52,12 +53,14 @@ A22001 / student123        (Aiman Rahman)
 
 ## What's built
 
-**Frontend** — Login, Dashboard (role-aware hero + live timetable preview),
-Timetable (full weekly grid with filters), Room Management (full CRUD UI),
-Analytics (utilization chart, conflict detection, optimization suggestions),
-Profile (avatar-only nav, not in the sidebar). Branded for UTM: real logo
-and official maroon/gold colors sourced from `brand.utm.my`, not
-approximated. See `Frontend/README.md` for full design-system notes.
+**Frontend** — Login (real auth, persists across refresh), Dashboard
+(role-aware hero + live timetable preview), Timetable (full weekly grid
+with server-side filters), Room Management (full CRUD against the real
+API), Analytics (utilization chart, conflict detection, optimization
+suggestions — all server-computed), Profile (avatar-only nav, not in the
+sidebar). Branded for UTM: real logo and official maroon/gold colors
+sourced from `brand.utm.my`, not approximated. See `Frontend/README.md`
+for full design-system notes.
 
 **Backend** — 7 PostgreSQL tables (Session, User, Subject, Room,
 StudentCourse, LecturerCourse, Schedule) with proper foreign keys and
@@ -65,28 +68,41 @@ indexes via Sequelize migrations. JWT auth with bcrypt password hashing.
 Full REST CRUD for Rooms and Subjects (admin-gated mutations). Role-scoped
 Schedule queries (students see their enrollments, lecturers see their
 teaching load, admins see everything). Analytics endpoints that are a
-direct, faithful port of the frontend's mock conflict-detection logic, now
-running as real SQL queries. A seeder that generates the same demo dataset
-the frontend was designed around (10 rooms, 12 subjects, 12 lecturers, 60
-students, ~29 schedule entries, 300 enrollments). See `Backend/README.md`
-for the full API reference and architecture notes.
+direct, faithful port of the frontend's original mock conflict-detection
+logic, now running as real SQL queries. A seeder that generates the same
+demo dataset the frontend was designed around (10 rooms, 12 subjects, 12
+lecturers, 60 students, ~29 schedule entries, 300 enrollments). See
+`Backend/README.md` for the full API reference and architecture notes.
 
-## Next step: integration
+## How the integration was verified
 
-The frontend currently imports directly from `Frontend/src/data/mockData.js`
-and `Frontend/src/data/analytics.js`. To connect it to the real backend:
+Every claim above was checked by actually running the thing, not just
+reviewing the code:
 
-1. Create `Frontend/src/services/api.js` with a small fetch/axios wrapper
-   that attaches the JWT to the `Authorization` header.
-2. Replace `useAuth()`'s mock `login()` in `Frontend/src/stores/auth.js`
-   with a real `POST /api/auth/login` call, storing the returned token.
-3. Replace the imports in `Dashboard.vue`, `Timetable.vue`,
-   `RoomManagement.vue`, `Analytics.vue`, and `Profile.vue` from
-   `mockData.js`/`analytics.js` with calls to the new API service.
-4. Remove the mock data files once nothing imports them, or keep them
-   around as Storybook-style fixtures for offline UI development — your
-   call.
+- Migrations and seeder run for real against a live PostgreSQL instance
+- Every API endpoint tested with real `curl` requests: auth success/failure,
+  role-based 403s, duplicate/foreign-key/validation 400s and 409s
+- The committed repo was cloned fresh into an empty directory and run
+  through `npm install` → `migrate` → `seed` → `start` → login with zero
+  manual fixes, to prove the *committed* code works standalone
+- The frontend was driven through a real headless browser against the real
+  running backend: logged in for real (confirmed an actual 3-part JWT in
+  localStorage), navigated every page with zero console errors, confirmed
+  a page refresh mid-session stays logged in instead of bouncing to
+  `/login`, and round-tripped a real room through the actual UI — created
+  it via the form, watched the count go from 10 to 11 rooms in the live
+  database, deleted it via the confirmation dialog, watched it return to 10
 
-This is a contained, mechanical change since the backend's response shapes
-(`{ room }`, `{ rooms }`, `{ schedules }`, `{ utilization, conflicts,
-suggestions }`) were deliberately designed to mirror the mock data's shape.
+## What's left
+
+- No automated test suite (all verification above was manual/scripted
+  testing during development, not a CI-style test suite)
+- No dedicated REST routes for StudentCourse/LecturerCourse — Profile.vue
+  currently derives "Enrolled Subjects"/"Teaching Assignments" from the
+  already-scoped `/api/schedules` response instead
+- No pagination on list endpoints — fine at this data scale
+- No rate limiting on login (brute-force protection)
+- `Frontend/src/data/mockData.js` and `data/analytics.js` are no longer
+  imported by the live app (confirmed via production build output) but
+  are kept as offline fixtures for UI development without a backend —
+  delete them if you don't want the dead weight
