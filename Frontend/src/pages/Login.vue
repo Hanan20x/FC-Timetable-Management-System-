@@ -121,7 +121,7 @@ async function handleSubmit() {
           </button>
         </form>
 
-        <div class="mt-8 border-t border-slate-100 pt-5">
+        <div v-if="demoAccounts.length > 0" class="mt-8 border-t border-slate-100 pt-5">
           <p class="mb-3 text-xs font-medium uppercase tracking-wide text-slate-400">
             Quick demo access
           </p>

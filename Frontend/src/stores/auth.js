@@ -22,14 +22,28 @@ const state = reactive({
   token: localStorage.getItem(TOKEN_KEY) || null,
 })
 
-// Demo accounts shown on the login screen for quick access. These exist as
-// real seeded rows in the database (see Backend/scripts/seed.js) — the
-// login screen just pre-fills the fields, the backend still validates them.
-export const demoAccounts = [
-  { username: 'admin', password: 'admin123', label: 'Admin — Nor Adlina' },
-  { username: 'STAFF1000', password: 'lecturer123', label: 'Lecturer — Dr. Aiman Hakim' },
-  { username: 'A22001', password: 'student123', label: 'Student — Aiman Rahman' },
-]
+// Demo accounts shown on the login screen for quick access during
+// development. These exist as real seeded rows in the database (see
+// Backend/scripts/seed.js) — the login screen just pre-fills the fields,
+// the backend still validates them for real.
+//
+// SECURITY: gated behind import.meta.env.DEV (Vite's built-in flag, true
+// for `npm run dev`, false for `npm run build`) so this list — and the
+// quick-login buttons that read it — are automatically empty/absent in
+// any production build. Leaving working admin credentials clickable on a
+// public login page is a real "default credentials" vulnerability; this
+// ensures nobody has to remember to strip it out by hand before deploying.
+// Before any real deployment, also change these seeded passwords to
+// something nobody could guess — gating the UI doesn't help if the
+// accounts themselves still use admin123/lecturer123/student123 and
+// someone logs in by typing the username/password directly.
+export const demoAccounts = import.meta.env.DEV
+  ? [
+      { username: 'admin', password: 'admin123', label: 'Admin — Nor Adlina' },
+      { username: 'STAFF1000', password: 'lecturer123', label: 'Lecturer — Dr. Aiman Hakim' },
+      { username: 'A22001', password: 'student123', label: 'Student — Aiman Rahman' },
+    ]
+  : []
 
 export function useAuth() {
   const isAuthenticated = computed(() => !!state.user && !!state.token)
