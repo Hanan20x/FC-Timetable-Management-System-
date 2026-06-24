@@ -102,6 +102,13 @@ reviewing the code:
   already-scoped `/api/schedules` response instead
 - No pagination on list endpoints — fine at this data scale
 - No rate limiting on login (brute-force protection)
+- The login screen's "Quick demo access" buttons (which pre-fill real
+  working passwords for the seeded demo accounts) are gated behind
+  `import.meta.env.DEV` and are confirmed absent from production builds —
+  but the underlying accounts still use weak seeded passwords
+  (`admin123`/`lecturer123`/`student123`). **Change those passwords before
+  any real deployment** — removing the one-click buttons doesn't help if
+  someone can still type the username/password directly.
 - `Frontend/src/data/mockData.js` and `data/analytics.js` are no longer
   imported by the live app (confirmed via production build output) but
   are kept as offline fixtures for UI development without a backend —
