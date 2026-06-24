@@ -1,5 +1,9 @@
-// Mock data layer — mirrors the future Postgres/Sequelize schema exactly.
-// Swap this module for real API calls in services/ once the backend is wired up.
+// Mock data layer — mirrors the relational backend schema (Sessions,
+// Users, Subjects, Rooms, Schedules, StudentCourse, LecturerCourse).
+//
+// STATUS: no longer imported by the live app — every page now calls the
+// real backend via src/services/. Kept around as an offline fixture for
+// UI development without a running backend/database. Safe to delete.
 
 export const currentSession = {
   id: 1,

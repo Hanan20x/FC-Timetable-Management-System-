@@ -1,5 +1,8 @@
 // Analytics derivations — pure functions over the schedule data.
-// This is the logic the future `/api/analytics` endpoint will replicate server-side.
+//
+// STATUS: this logic has been ported to Backend/controllers/analyticsController.js
+// and is what /api/analytics actually runs now. This file is no longer
+// imported by the live app — kept as an offline fixture alongside mockData.js.
 
 import { rooms, schedules, days, timeSlots, getRoom, getSubject, getLecturer } from './mockData.js'
 
