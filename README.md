@@ -9,13 +9,13 @@ The UTM Timetable Management System (TMS) is a responsive, mobile-first Single P
 
 By upgrading the legacy desktop-only system, this platform allows students and lecturers to easily access personalized schedules, real-time updates, and academic analytics from any device. Built with Vue.js, Node.js, and PostgreSQL, the system securely integrates with existing JSON timetable data while adding advanced features like role-based access, schedule conflict detection, and interactive visual insights.
 
-## Status
+## Tech Stack
 
-| Layer | Status |
+| Layer | Technologies |
 |---|---|
-| **Frontend** | Complete — branded for UTM, wired to the real backend |
-| **Backend** | Complete — built and verified end-to-end against a real PostgreSQL database |
-| **Integration** | Complete — frontend calls the live API; verified with a real headless browser doing a full create→view→delete round trip against a real running backend + Postgres |
+| **Frontend** | Vue 3, Vite, Tailwind CSS |
+| **Backend** | Node.js, Express, Sequelize ORM |
+| **Database** | PostgreSQL |
 
 ## Project structure
 
@@ -51,45 +51,22 @@ npm run dev              # http://localhost:5173
 
 
 
-## What's built
+## Features
 
-**Frontend** — Login (real auth, persists across refresh), Dashboard
-(role-aware hero + live timetable preview), Timetable (full weekly grid
-with server-side filters), Room Management (full CRUD against the real
-API), Analytics (utilization chart, conflict detection, optimization
-suggestions — all server-computed), Profile (avatar-only nav, not in the
-sidebar). Branded for UTM: real logo and official maroon/gold colors
-sourced from `brand.utm.my`, not approximated. See `Frontend/README.md`
-for full design-system notes.
+**Frontend**
+- **Authentication:** Secure login with role-based access control and session persistence.
+- **Dashboard:** Role-aware welcome hero and live timetable overview.
+- **Timetable Viewer:** Full weekly interactive grid with server-side dynamic filtering.
+- **Room Management:** Complete interface for adding, editing, and removing physical rooms.
+- **Analytics:** Server-computed utilization charts, schedule conflict detection, and optimization suggestions.
+- **Branding:** Officially branded for UTM with accurate logos and maroon/gold color schemes.
 
-**Backend** — 7 PostgreSQL tables (Session, User, Subject, Room,
-StudentCourse, LecturerCourse, Schedule) with proper foreign keys and
-indexes via Sequelize migrations. JWT auth with bcrypt password hashing.
-CORS dynamically configured for seamless multi-instance local development (`http://localhost:*`).
-Full REST CRUD for Rooms and Subjects (admin-gated mutations). Role-scoped
-Schedule queries (students see their enrollments, lecturers see their
-teaching load, admins see everything). Analytics endpoints that are a
-direct, faithful port of the frontend's original mock conflict-detection
-logic, now running as real SQL queries. A seeder that generates the same
-demo dataset the frontend was designed around (10 rooms, 12 subjects, 12
-lecturers, 60 students, ~29 schedule entries, 300 enrollments). See
-`Backend/README.md` for the full API reference and architecture notes.
+**Backend**
+- **Database Architecture:** 7 normalized PostgreSQL tables with proper foreign keys via Sequelize migrations.
+- **Security:** JWT-based authentication, bcrypt password hashing, and dynamic CORS configuration for local development.
+- **RESTful API:** Full CRUD endpoints with admin-gated mutations.
+- **Role-Scoping:** Data is strictly scoped so students see enrollments, lecturers see teaching loads, and admins see everything.
+- **Analytical Engine:** SQL-driven timetable conflict detection and statistics logic.
+- **Seeding:** Built-in seeder generating a realistic campus dataset (rooms, subjects, lecturers, and students).
 
-## How the integration was verified
 
-Every claim above was checked by actually running the thing, not just
-reviewing the code:
-
-- Migrations and seeder run for real against a live PostgreSQL instance
-- Every API endpoint tested with real `curl` requests: auth success/failure,
-  role-based 403s, duplicate/foreign-key/validation 400s and 409s
-- The committed repo was cloned fresh into an empty directory and run
-  through `npm install` → `migrate` → `seed` → `start` → login with zero
-  manual fixes, to prove the *committed* code works standalone
-- The frontend was driven through a real headless browser against the real
-  running backend: logged in for real (confirmed an actual 3-part JWT in
-  localStorage), navigated every page with zero console errors, confirmed
-  a page refresh mid-session stays logged in instead of bouncing to
-  `/login`, and round-tripped a real room through the actual UI — created
-  it via the form, watched the count go from 10 to 11 rooms in the live
-  database, deleted it via the confirmation dialog, watched it return to 10
