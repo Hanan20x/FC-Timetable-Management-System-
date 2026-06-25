@@ -1,11 +1,11 @@
-# UTM Timetable Management System
+# FC Timetable Management System
 
 Full-stack timetable management system for Universiti Teknologi Malaysia's
 Faculty of Computing — Vue 3 frontend + Express/Sequelize/PostgreSQL backend.
 
 ## Project Overview
 
-The UTM Timetable Management System (TMS) is a responsive, mobile-first Single Page Application (SPA) designed to modernize timetable management for the Faculty of Computing at Universiti Teknologi Malaysia. 
+The FC Timetable Management System (TMS) is a responsive, mobile-first Single Page Application (SPA) designed to modernize timetable management for the Faculty of Computing at Universiti Teknologi Malaysia. 
 
 By upgrading the legacy desktop-only system, this platform allows students and lecturers to easily access personalized schedules, real-time updates, and academic analytics from any device. Built with Vue.js, Node.js, and PostgreSQL, the system securely integrates with existing JSON timetable data while adding advanced features like role-based access, schedule conflict detection, and interactive visual insights.
 
